@@ -424,59 +424,58 @@ export default function Configure() {
     }
   };
 
-  const handleCopyLink = async (event: React.MouseEvent<HTMLButtonElement>) => {
+const handleCopyLink = async (event: React.MouseEvent<HTMLButtonElement>) => {
     event.preventDefault();
     if (createAndValidateConfig()) {
-      const id = toast.loading('Generating manifest URL...', toastOptions);
-      const manifestUrl = await getManifestUrl();
-      if (!manifestUrl.success || !manifestUrl.manifest) {
-        toast.update(id, {
-          render: manifestUrl.message || 'Failed to generate manifest URL',
-          type: 'error',
-          autoClose: 5000,
-          isLoading: false,
-        });
+        const id = toast.loading('Generating manifest URL...', toastOptions);
+        const manifestUrl = await getManifestUrl();
+        if (!manifestUrl.success || !manifestUrl.manifest) {
+            toast.update(id, {
+                render: manifestUrl.message || 'Failed to generate manifest URL',
+                type: 'error',
+                autoClose: 5000,
+                isLoading: false,
+            });
+            setDisableButtons(false);
+            return;
+        }
+        if (!navigator.clipboard) {
+            toast.update(id, {
+                render: 'Clipboard not available. The link can be copied manually at the bottom of this page.',
+                type: 'error',
+                autoClose: 3000,
+                isLoading: false,
+            });
+            setManualManifestUrl(manifestUrl.manifest);
+            setDisableButtons(false);
+            return;
+        }
+        navigator.clipboard
+            .writeText(manifestUrl.manifest)
+            .then(() => {
+                toast.update(id, {
+                    render: 'Manifest URL copied to clipboard',
+                    type: 'success',
+                    autoClose: 5000,
+                    toastId: 'copiedManifestUrl',
+                    isLoading: false,
+                });
+                setManualManifestUrl(null);
+            })
+            .catch((err: any) => {
+                console.error('Failed to copy manifest URL to clipboard', err);
+                toast.update(id, {
+                    render: 'Failed to copy manifest URL to clipboard. The link can be copied manually at the bottom of this page.',
+                    type: 'error',
+                    autoClose: 3000,
+                    isLoading: false,
+                });
+                setManualManifestUrl(manifestUrl.manifest);
+            });
         setDisableButtons(false);
-        return;
-      }
-      if (!navigator.clipboard) {
-        toast.update(id, {
-          render:
-            'Clipboard not available. The link can be copied manually at the bottom of this page.',
-          type: 'error',
-          autoClose: 3000,
-          isLoading: false,
-        });
-        setManualManifestUrl(manifestUrl.manifest);
-        setDisableButtons(false);
-        return;
-      }
-      navigator.clipboard
-        .writeText(manifestUrl.manifest)
-        .then(() => {
-          toast.update(id, {
-            render: 'Manifest URL copied to clipboard',
-            type: 'success',
-            autoClose: 5000,
-            toastId: 'copiedManifestUrl',
-            isLoading: false,
-          });
-          setManualManifestUrl(null);
-        })
-        .catch((err: any) => {
-          console.error('Failed to copy manifest URL to clipboard', err);
-          toast.update(id, {
-            render:
-              'Failed to copy manifest URL to clipboard. The link can be copied manually at the bottom of this page.',
-            type: 'error',
-            autoClose: 3000,
-            isLoading: false,
-          });
-          setManualManifestUrl(manifestUrl.manifest);
-        });
-      setDisableButtons(false);
     }
-  };
+};
+
 
   const loadValidValuesFromObject = (
     object: { [key: string]: boolean }[],
