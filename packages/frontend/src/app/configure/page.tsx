@@ -424,12 +424,13 @@ export default function Configure() {
     }
   };
 
-  const handleCopyLink = async (event: React.MouseEvent<HTMLButtonElement>) => {
+ const handleCopyLink = async (event: React.MouseEvent<HTMLButtonElement>) => {
     event.preventDefault();
     if (createAndValidateConfig()) {
         const id = toast.loading('Generating manifest URL...', toastOptions);
         const manifestUrl = await getManifestUrl();
         if (!manifestUrl.success || !manifestUrl.manifest) {
+            console.error('Manifest URL generation failed:', manifestUrl.message);
             toast.update(id, {
                 render: manifestUrl.message || 'Failed to generate manifest URL',
                 type: 'error',
@@ -439,42 +440,55 @@ export default function Configure() {
             setDisableButtons(false);
             return;
         }
-        if (!navigator.clipboard) {
+
+        try {
+            console.log('Trying to copy using Clipboard API:', manifestUrl.manifest);
+            if (navigator.clipboard && navigator.clipboard.writeText) {
+                await navigator.clipboard.writeText(manifestUrl.manifest);
+                toast.update(id, {
+                    render: 'Manifest URL copied to clipboard!',
+                    type: 'success',
+                    autoClose: 5000,
+                    isLoading: false,
+                });
+            } else {
+                console.log('Falling back to textarea method for copying.');
+                const textArea = document.createElement('textarea');
+                textArea.value = manifestUrl.manifest;
+                textArea.style.position = 'absolute';
+                textArea.style.left = '-9999px'; // Hide the textarea
+                document.body.appendChild(textArea);
+                textArea.select();
+
+                const successful = document.execCommand('copy');
+                document.body.removeChild(textArea);
+
+                if (successful) {
+                    toast.update(id, {
+                        render: 'Manifest URL copied using fallback!',
+                        type: 'success',
+                        autoClose: 5000,
+                        isLoading: false,
+                    });
+                } else {
+                    throw new Error('Fallback copy failed');
+                }
+            }
+        } catch (err: any) {
+            console.error('Error copying to clipboard:', err);
             toast.update(id, {
-                render: 'Clipboard not available. The link can be copied manually at the bottom of this page.',
+                render: `Failed to copy manifest URL. Error: ${err.message || err}`,
                 type: 'error',
-                autoClose: 3000,
+                autoClose: 5000,
                 isLoading: false,
             });
             setManualManifestUrl(manifestUrl.manifest);
+        } finally {
             setDisableButtons(false);
-            return;
         }
-        navigator.clipboard
-            .writeText(manifestUrl.manifest)
-            .then(() => {
-                toast.update(id, {
-                    render: 'Manifest URL copied to clipboard',
-                    type: 'success',
-                    autoClose: 5000,
-                    toastId: 'copiedManifestUrl',
-                    isLoading: false,
-                });
-                setManualManifestUrl(null);
-            })
-            .catch((err: any) => {
-                console.error('Failed to copy manifest URL to clipboard', err);
-                toast.update(id, {
-                    render: 'Failed to copy manifest URL to clipboard. The link can be copied manually at the bottom of this page.',
-                    type: 'error',
-                    autoClose: 3000,
-                    isLoading: false,
-                });
-                setManualManifestUrl(manifestUrl.manifest);
-            });
-        setDisableButtons(false);
     }
 };
+
 
 
   const loadValidValuesFromObject = (
@@ -1339,58 +1353,47 @@ export default function Configure() {
         </div>
 
         <div className={styles.installButtons}>
-          <button
-            onClick={handleInstall}
-            className={styles.installButton}
-            disabled={disableButtons}
-          >
-            Install
-          </button>
-          <button
-            onClick={handleInstallToWeb}
-            className={styles.installButton}
-            disabled={disableButtons}
-          >
-            Install to Stremio Web
-          </button>
-          <button
-            onClick={handleCopyLink}
-            className={styles.installButton}
-            disabled={disableButtons}
-          >
-            Copy Link
-          </button>
-          {manualManifestUrl && (
-            <>
-              <div
+    <button
+        onClick={handleInstall}
+        className={styles.installButton}
+        disabled={disableButtons}
+    >
+        Install
+    </button>
+    <button
+        onClick={handleInstallToWeb}
+        className={styles.installButton}
+        disabled={disableButtons}
+    >
+        Install to Stremio Web
+    </button>
+    <button
+        onClick={handleCopyLink}
+        className={styles.installButton}
+        disabled={disableButtons}
+    >
+        Copy Link
+    </button>
+    {manualManifestUrl && (
+        <div
+            style={{
+                marginTop: '20px',
+                textAlign: 'center',
+            }}
+        >
+            <p>If copying fails, manually copy the URL below:</p>
+            <input
+                type="text"
+                value={manualManifestUrl}
+                readOnly
                 style={{
-                  display: 'flex',
-                  flexDirection: 'column',
-                  alignItems: 'center',
+                    width: '100%',
+                    padding: '10px',
+                    textAlign: 'center',
+                    border: '1px solid #ccc',
+                    borderRadius: '8px',
                 }}
-              >
-                <p style={{ padding: '5px' }}>
-                  If the above buttons do not work, you can use the following
-                  manifest URL to install the addon.
-                </p>
-                <input
-                  id="manualManifestUrl"
-                  type="text"
-                  value={manualManifestUrl}
-                  readOnly
-                  style={{ width: '100%', padding: '5px', margin: '5px' }}
-                />
-              </div>
-            </>
-          )}
+            />
         </div>
-      </div>
-      <ToastContainer
-        stacked
-        position="top-center"
-        transition={Slide}
-        draggablePercent={30}
-      />
-    </div>
-  );
-}
+    )}
+</div>
