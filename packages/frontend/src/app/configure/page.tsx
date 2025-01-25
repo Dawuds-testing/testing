@@ -424,7 +424,7 @@ export default function Configure() {
     }
   };
 
-const handleCopyLink = async (event: React.MouseEvent<HTMLButtonElement>) => {
+  const handleCopyLink = async (event: React.MouseEvent<HTMLButtonElement>) => {
     event.preventDefault();
     if (createAndValidateConfig()) {
         const id = toast.loading('Generating manifest URL...', toastOptions);
