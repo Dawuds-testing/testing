@@ -424,116 +424,59 @@ export default function Configure() {
     }
   };
 
-const handleCopyLink = async (event: React.MouseEvent<HTMLButtonElement>) => {
+  const handleCopyLink = async (event: React.MouseEvent<HTMLButtonElement>) => {
     event.preventDefault();
-    
-    // First, validate the configuration
-    if (!createAndValidateConfig()) {
-        return;
-    }
-
-    // Disable buttons to prevent multiple clicks
-    setDisableButtons(true);
-
-    // Start loading toast
-    const id = toast.loading('Generating manifest URL...', toastOptions);
-
-    try {
-        // Generate manifest URL
-        const manifestUrl = await getManifestUrl();
-
-        // Check if URL generation was successful
-        if (!manifestUrl.success || !manifestUrl.manifest) {
-            console.error('Manifest URL generation failed:', manifestUrl.message);
-            toast.update(id, {
-                render: manifestUrl.message || 'Failed to generate manifest URL',
-                type: 'error',
-                autoClose: 5000,
-                isLoading: false,
-            });
-            setDisableButtons(false);
-            return;
-        }
-
-        // Attempt to copy the URL with multiple fallback methods
-        const urlToCopy = manifestUrl.manifest;
-
-        // Method 1: Modern Clipboard API
-        if (navigator.clipboard && navigator.clipboard.writeText) {
-            try {
-                await navigator.clipboard.writeText(urlToCopy);
-                toast.update(id, {
-                    render: 'Manifest URL copied to clipboard!',
-                    type: 'success',
-                    autoClose: 5000,
-                    isLoading: false,
-                });
-                return;
-            } catch (clipboardError) {
-                console.warn('Clipboard API failed:', clipboardError);
-            }
-        }
-
-        // Method 2: Fallback for Safari and older browsers
-        const textArea = document.createElement('textarea');
-        textArea.value = urlToCopy;
-        textArea.style.position = 'fixed'; // Changed from 'absolute' to 'fixed'
-        textArea.style.top = '0';
-        textArea.style.left = '0';
-        textArea.style.width = '2em';
-        textArea.style.height = '2em';
-        textArea.style.padding = '0';
-        textArea.style.border = 'none';
-        textArea.style.outline = 'none';
-        textArea.style.boxShadow = 'none';
-        textArea.style.background = 'transparent';
-
-        document.body.appendChild(textArea);
-        textArea.select();
-
-        let successful = false;
-        try {
-            successful = document.execCommand('copy');
-        } catch (err) {
-            console.error('Fallback copy failed', err);
-        }
-
-        // Remove the temporary textarea
-        document.body.removeChild(textArea);
-
-        if (successful) {
-            toast.update(id, {
-                render: 'Manifest URL copied!',
-                type: 'success',
-                autoClose: 5000,
-                isLoading: false,
-            });
-        } else {
-            // If both methods fail, show manual copy option
-            toast.update(id, {
-                render: 'Failed to copy automatically. Please copy manually.',
-                type: 'error',
-                autoClose: 5000,
-                isLoading: false,
-            });
-            setManualManifestUrl(urlToCopy);
-        }
-    } catch (error: any) {
-        console.error('Unexpected error in handleCopyLink:', error);
+    if (createAndValidateConfig()) {
+      const id = toast.loading('Generating manifest URL...', toastOptions);
+      const manifestUrl = await getManifestUrl();
+      if (!manifestUrl.success || !manifestUrl.manifest) {
         toast.update(id, {
-            render: `Failed to copy manifest URL. Error: ${error.message || error}`,
-            type: 'error',
-            autoClose: 5000,
-            isLoading: false,
+          render: manifestUrl.message || 'Failed to generate manifest URL',
+          type: 'error',
+          autoClose: 5000,
+          isLoading: false,
         });
-        setManualManifestUrl(manifestUrl?.manifest || null);
-    } finally {
-        // Always ensure buttons are re-enabled
         setDisableButtons(false);
+        return;
+      }
+      if (!navigator.clipboard) {
+        toast.update(id, {
+          render:
+            'Clipboard not available. The link can be copied manually at the bottom of this page.',
+          type: 'error',
+          autoClose: 3000,
+          isLoading: false,
+        });
+        setManualManifestUrl(manifestUrl.manifest);
+        setDisableButtons(false);
+        return;
+      }
+      navigator.clipboard
+        .writeText(manifestUrl.manifest)
+        .then(() => {
+          toast.update(id, {
+            render: 'Manifest URL copied to clipboard',
+            type: 'success',
+            autoClose: 5000,
+            toastId: 'copiedManifestUrl',
+            isLoading: false,
+          });
+          setManualManifestUrl(null);
+        })
+        .catch((err: any) => {
+          console.error('Failed to copy manifest URL to clipboard', err);
+          toast.update(id, {
+            render:
+              'Failed to copy manifest URL to clipboard. The link can be copied manually at the bottom of this page.',
+            type: 'error',
+            autoClose: 3000,
+            isLoading: false,
+          });
+          setManualManifestUrl(manifestUrl.manifest);
+        });
+      setDisableButtons(false);
     }
-};
-
-
+  };
 
   const loadValidValuesFromObject = (
     object: { [key: string]: boolean }[],
@@ -1396,68 +1339,59 @@ const handleCopyLink = async (event: React.MouseEvent<HTMLButtonElement>) => {
           }
         </div>
 
-return (
-    <div className={styles.container}>
-        <h1>Configure Your Addon</h1>
-        {/* Add other configuration components here */}
-
         <div className={styles.installButtons}>
-            <button
-                onClick={handleInstall}
-                className={styles.installButton}
-                disabled={disableButtons}
-            >
-                Install
-            </button>
-            <button
-                onClick={handleInstallToWeb}
-                className={styles.installButton}
-                disabled={disableButtons}
-            >
-                Install to Stremio Web
-            </button>
-            <button
-                onClick={handleCopyLink}
-                className={styles.installButton}
-                disabled={disableButtons}
-            >
-                Copy Link
-            </button>
-            {manualManifestUrl && (
-                <div
-                    style={{
-                        marginTop: '20px',
-                        textAlign: 'center',
-                    }}
-                >
-                    <p>If copying fails, manually copy the URL below:</p>
-                    <input
-                        type="text"
-                        value={manualManifestUrl}
-                        readOnly
-                        style={{
-                            width: '100%',
-                            padding: '10px',
-                            border: '1px solid #ccc',
-                            borderRadius: '8px',
-                        }}
-                    />
-                </div>
-            )}
-                  <ToastContainer
-            position="top-right"
-            autoClose={5000}
-            hideProgressBar
-            newestOnTop
-            closeOnClick
-            rtl={false}
-            pauseOnFocusLoss
-            draggable
-            pauseOnHover
-            transition={Slide}
-        />
+          <button
+            onClick={handleInstall}
+            className={styles.installButton}
+            disabled={disableButtons}
+          >
+            Install
+          </button>
+          <button
+            onClick={handleInstallToWeb}
+            className={styles.installButton}
+            disabled={disableButtons}
+          >
+            Install to Stremio Web
+          </button>
+          <button
+            onClick={handleCopyLink}
+            className={styles.installButton}
+            disabled={disableButtons}
+          >
+            Copy Link
+          </button>
+          {manualManifestUrl && (
+            <>
+              <div
+                style={{
+                  display: 'flex',
+                  flexDirection: 'column',
+                  alignItems: 'center',
+                }}
+              >
+                <p style={{ padding: '5px' }}>
+                  If the above buttons do not work, you can use the following
+                  manifest URL to install the addon.
+                </p>
+                <input
+                  id="manualManifestUrl"
+                  type="text"
+                  value={manualManifestUrl}
+                  readOnly
+                  style={{ width: '100%', padding: '5px', margin: '5px' }}
+                />
+              </div>
+            </>
+          )}
+        </div>
+      </div>
+      <ToastContainer
+        stacked
+        position="top-center"
+        transition={Slide}
+        draggablePercent={30}
+      />
     </div>
-);
+  );
 }
-</div>
-
