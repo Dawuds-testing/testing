@@ -426,9 +426,23 @@ export default function Configure() {
 
 const handleCopyLink = async (event: React.MouseEvent<HTMLButtonElement>) => {
     event.preventDefault();
-    if (createAndValidateConfig()) {
-        const id = toast.loading('Generating manifest URL...', toastOptions);
+    
+    // First, validate the configuration
+    if (!createAndValidateConfig()) {
+        return;
+    }
+
+    // Disable buttons to prevent multiple clicks
+    setDisableButtons(true);
+
+    // Start loading toast
+    const id = toast.loading('Generating manifest URL...', toastOptions);
+
+    try {
+        // Generate manifest URL
         const manifestUrl = await getManifestUrl();
+
+        // Check if URL generation was successful
         if (!manifestUrl.success || !manifestUrl.manifest) {
             console.error('Manifest URL generation failed:', manifestUrl.message);
             toast.update(id, {
@@ -441,51 +455,81 @@ const handleCopyLink = async (event: React.MouseEvent<HTMLButtonElement>) => {
             return;
         }
 
-        try {
-            console.log('Trying to copy using Clipboard API:', manifestUrl.manifest);
-            if (navigator.clipboard && navigator.clipboard.writeText) {
-                await navigator.clipboard.writeText(manifestUrl.manifest);
+        // Attempt to copy the URL with multiple fallback methods
+        const urlToCopy = manifestUrl.manifest;
+
+        // Method 1: Modern Clipboard API
+        if (navigator.clipboard && navigator.clipboard.writeText) {
+            try {
+                await navigator.clipboard.writeText(urlToCopy);
                 toast.update(id, {
                     render: 'Manifest URL copied to clipboard!',
                     type: 'success',
                     autoClose: 5000,
                     isLoading: false,
                 });
-            } else {
-                console.log('Falling back to textarea method for copying.');
-                const textArea = document.createElement('textarea');
-                textArea.value = manifestUrl.manifest;
-                textArea.style.position = 'absolute';
-                textArea.style.left = '-9999px';
-                document.body.appendChild(textArea);
-                textArea.select();
-
-                const successful = document.execCommand('copy');
-                document.body.removeChild(textArea);
-
-                if (successful) {
-                    toast.update(id, {
-                        render: 'Manifest URL copied using fallback!',
-                        type: 'success',
-                        autoClose: 5000,
-                        isLoading: false,
-                    });
-                } else {
-                    throw new Error('Fallback copy failed');
-                }
+                return;
+            } catch (clipboardError) {
+                console.warn('Clipboard API failed:', clipboardError);
             }
-        } catch (err: any) {
-            console.error('Error copying to clipboard:', err);
+        }
+
+        // Method 2: Fallback for Safari and older browsers
+        const textArea = document.createElement('textarea');
+        textArea.value = urlToCopy;
+        textArea.style.position = 'fixed'; // Changed from 'absolute' to 'fixed'
+        textArea.style.top = '0';
+        textArea.style.left = '0';
+        textArea.style.width = '2em';
+        textArea.style.height = '2em';
+        textArea.style.padding = '0';
+        textArea.style.border = 'none';
+        textArea.style.outline = 'none';
+        textArea.style.boxShadow = 'none';
+        textArea.style.background = 'transparent';
+
+        document.body.appendChild(textArea);
+        textArea.select();
+
+        let successful = false;
+        try {
+            successful = document.execCommand('copy');
+        } catch (err) {
+            console.error('Fallback copy failed', err);
+        }
+
+        // Remove the temporary textarea
+        document.body.removeChild(textArea);
+
+        if (successful) {
             toast.update(id, {
-                render: `Failed to copy manifest URL. Error: ${err.message || err}`,
+                render: 'Manifest URL copied!',
+                type: 'success',
+                autoClose: 5000,
+                isLoading: false,
+            });
+        } else {
+            // If both methods fail, show manual copy option
+            toast.update(id, {
+                render: 'Failed to copy automatically. Please copy manually.',
                 type: 'error',
                 autoClose: 5000,
                 isLoading: false,
             });
-            setManualManifestUrl(manifestUrl.manifest);
-        } finally {
-            setDisableButtons(false);
+            setManualManifestUrl(urlToCopy);
         }
+    } catch (error: any) {
+        console.error('Unexpected error in handleCopyLink:', error);
+        toast.update(id, {
+            render: `Failed to copy manifest URL. Error: ${error.message || error}`,
+            type: 'error',
+            autoClose: 5000,
+            isLoading: false,
+        });
+        setManualManifestUrl(manifestUrl?.manifest || null);
+    } finally {
+        // Always ensure buttons are re-enabled
+        setDisableButtons(false);
     }
 };
 
