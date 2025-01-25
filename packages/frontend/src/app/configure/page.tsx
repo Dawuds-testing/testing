@@ -424,7 +424,7 @@ export default function Configure() {
     }
   };
 
- const handleCopyLink = async (event: React.MouseEvent<HTMLButtonElement>) => {
+const handleCopyLink = async (event: React.MouseEvent<HTMLButtonElement>) => {
     event.preventDefault();
     if (createAndValidateConfig()) {
         const id = toast.loading('Generating manifest URL...', toastOptions);
@@ -456,7 +456,7 @@ export default function Configure() {
                 const textArea = document.createElement('textarea');
                 textArea.value = manifestUrl.manifest;
                 textArea.style.position = 'absolute';
-                textArea.style.left = '-9999px'; // Hide the textarea
+                textArea.style.left = '-9999px';
                 document.body.appendChild(textArea);
                 textArea.select();
 
@@ -1352,48 +1352,68 @@ export default function Configure() {
           }
         </div>
 
+return (
+    <div className={styles.container}>
+        <h1>Configure Your Addon</h1>
+        {/* Add other configuration components here */}
+
         <div className={styles.installButtons}>
-    <button
-        onClick={handleInstall}
-        className={styles.installButton}
-        disabled={disableButtons}
-    >
-        Install
-    </button>
-    <button
-        onClick={handleInstallToWeb}
-        className={styles.installButton}
-        disabled={disableButtons}
-    >
-        Install to Stremio Web
-    </button>
-    <button
-        onClick={handleCopyLink}
-        className={styles.installButton}
-        disabled={disableButtons}
-    >
-        Copy Link
-    </button>
-    {manualManifestUrl && (
-        <div
-            style={{
-                marginTop: '20px',
-                textAlign: 'center',
-            }}
-        >
-            <p>If copying fails, manually copy the URL below:</p>
-            <input
-                type="text"
-                value={manualManifestUrl}
-                readOnly
-                style={{
-                    width: '100%',
-                    padding: '10px',
-                    textAlign: 'center',
-                    border: '1px solid #ccc',
-                    borderRadius: '8px',
-                }}
-            />
-        </div>
-    )}
+            <button
+                onClick={handleInstall}
+                className={styles.installButton}
+                disabled={disableButtons}
+            >
+                Install
+            </button>
+            <button
+                onClick={handleInstallToWeb}
+                className={styles.installButton}
+                disabled={disableButtons}
+            >
+                Install to Stremio Web
+            </button>
+            <button
+                onClick={handleCopyLink}
+                className={styles.installButton}
+                disabled={disableButtons}
+            >
+                Copy Link
+            </button>
+            {manualManifestUrl && (
+                <div
+                    style={{
+                        marginTop: '20px',
+                        textAlign: 'center',
+                    }}
+                >
+                    <p>If copying fails, manually copy the URL below:</p>
+                    <input
+                        type="text"
+                        value={manualManifestUrl}
+                        readOnly
+                        style={{
+                            width: '100%',
+                            padding: '10px',
+                            border: '1px solid #ccc',
+                            borderRadius: '8px',
+                        }}
+                    />
+                </div>
+            )}
+                  <ToastContainer
+            position="top-right"
+            autoClose={5000}
+            hideProgressBar
+            newestOnTop
+            closeOnClick
+            rtl={false}
+            pauseOnFocusLoss
+            draggable
+            pauseOnHover
+            transition={Slide}
+        />
+    </div>
+);
+}
 </div>
+
