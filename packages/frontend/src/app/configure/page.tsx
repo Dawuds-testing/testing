@@ -1344,9 +1344,7 @@ export default function Configure() {
               </div>
             </div>
           }
-        </div>
-
-        <div className={styles.installButtons}>
+        </div><div className={styles.installButtons}>
     <button
         onClick={handleInstall}
         className={styles.installButton}
@@ -1398,6 +1396,3 @@ export default function Configure() {
     transition={Slide}
 />
 
-</div>
-  );
-}
